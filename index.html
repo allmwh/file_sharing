@@ -169,55 +169,78 @@
         container.innerHTML = '';
 
         pdfFiles.forEach(file => {
-          // 取得完整公開直連網址
-          const fileUrl = new URL(file.name, window.location.href).href;
+          // 確保使用完整的絕對 URL
+          const baseUrl = window.location.href.split('?')[0].split('#')[0];
+          const fileUrl = baseUrl.endsWith('/') ? `${baseUrl}${file.name}` : `${baseUrl}/${file.name}`;
 
           const card = document.createElement('div');
           card.className = 'file-card';
           card.innerHTML = `
-            <a class="file-info" href="${file.name}" target="_blank">
+            <a class="file-info" href="${fileUrl}" target="_blank">
               <span class="pdf-badge">PDF</span>
               <span class="file-name" title="${file.name}">${file.name}</span>
             </a>
             <div class="actions">
               <button class="btn btn-outline copy-btn" data-url="${fileUrl}">Copy Link</button>
-              <a class="btn btn-outline" href="${file.name}" target="_blank">Preview</a>
-              <a class="btn btn-primary" href="${file.name}" download>Download</a>
+              <a class="btn btn-outline" href="${fileUrl}" target="_blank">Preview</a>
+              <button class="btn btn-primary download-btn" data-url="${fileUrl}" data-name="${file.name}">Download</button>
             </div>
           `;
           container.appendChild(card);
         });
 
-        // 綁定複製連結事件
+        // 綁定 Copy Link
         document.querySelectorAll('.copy-btn').forEach(button => {
           button.addEventListener('click', async (e) => {
             e.preventDefault();
             const url = button.getAttribute('data-url');
             try {
               await navigator.clipboard.writeText(url);
-              const originalText = button.textContent;
-              button.textContent = 'Copied!';
-              button.classList.add('btn-copied');
-
-              setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('btn-copied');
-              }, 1500);
+              showFeedback(button, 'Copied!');
             } catch (err) {
-              // 備用複製方案（若瀏覽器權限受限）
               const textarea = document.createElement('textarea');
               textarea.value = url;
               document.body.appendChild(textarea);
               textarea.select();
               document.execCommand('copy');
               document.body.removeChild(textarea);
+              showFeedback(button, 'Copied!');
+            }
+          });
+        });
 
-              button.textContent = 'Copied!';
-              button.classList.add('btn-copied');
-              setTimeout(() => {
-                button.textContent = 'Copy Link';
-                button.classList.remove('btn-copied');
-              }, 1500);
+        // 綁定 Download（使用 Blob 強制二進位下載，確保為 .pdf）
+        document.querySelectorAll('.download-btn').forEach(button => {
+          button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const url = button.getAttribute('data-url');
+            const filename = button.getAttribute('data-name');
+            const originalText = button.textContent;
+
+            try {
+              button.textContent = 'Downloading...';
+              button.disabled = true;
+
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('File download failed');
+              const blob = await res.blob();
+
+              const blobUrl = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = blobUrl;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(blobUrl);
+
+              button.textContent = originalText;
+              button.disabled = false;
+            } catch (err) {
+              alert('下載失敗，將在新分頁開啟：' + err.message);
+              window.open(url, '_blank');
+              button.textContent = originalText;
+              button.disabled = false;
             }
           });
         });
@@ -225,6 +248,16 @@
       } catch (err) {
         statusEl.textContent = 'Reading failed: ' + err.message;
       }
+    }
+
+    function showFeedback(button, text) {
+      const originalText = button.textContent;
+      button.textContent = text;
+      button.classList.add('btn-copied');
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.classList.remove('btn-copied');
+      }, 1500);
     }
 
     loadFiles();
