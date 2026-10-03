@@ -131,7 +131,7 @@
     </header>
 
     <div class="file-list" id="file-list">
-      <div class="status-msg" id="status">正在讀取檔案清單...</div>
+      <div class="status-msg" id="status">Loading ...</div>
     </div>
   </div>
 
@@ -151,7 +151,6 @@
         }
         const data = await response.json();
 
-        // 過濾出副檔名為 .pdf 的檔案
         const pdfFiles = data.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.pdf'));
 
         if (pdfFiles.length === 0) {
