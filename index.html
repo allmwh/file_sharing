@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>File Sharing</title>
+  <title>Files</title>
   <style>
     :root {
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
+      --success: #16a34a;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #1e293b;
@@ -25,30 +26,25 @@
     }
     .container {
       width: 100%;
-      max-width: 680px;
+      max-width: 760px;
     }
     header {
       margin-bottom: 24px;
     }
     h1 {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: 700;
       margin: 0 0 8px 0;
-    }
-    p.desc {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 14px;
     }
     .file-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .file-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 16px 20px;
       display: flex;
       align-items: center;
@@ -68,6 +64,7 @@
       color: var(--text);
       flex: 1;
       overflow: hidden;
+      margin-right: 16px;
     }
     .pdf-badge {
       background-color: #fee2e2;
@@ -94,13 +91,20 @@
     .btn {
       font-size: 13px;
       text-decoration: none;
-      padding: 6px 12px;
+      padding: 7px 13px;
       border-radius: 6px;
       font-weight: 500;
       transition: all 0.15s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-sizing: border-box;
     }
     .btn-outline {
-      border: 1px solid var(--border);
+      border-color: var(--border);
       color: var(--text);
       background: #fff;
     }
@@ -113,6 +117,11 @@
     }
     .btn-primary:hover {
       background: var(--primary-hover);
+    }
+    .btn-copied {
+      background: var(--success) !important;
+      color: #fff !important;
+      border-color: var(--success) !important;
     }
     .status-msg {
       color: var(--text-muted);
@@ -127,7 +136,6 @@
   <div class="container">
     <header>
       <h1>Files</h1>
-      <p class="desc"> </p>
     </header>
 
     <div class="file-list" id="file-list">
@@ -161,6 +169,9 @@
         container.innerHTML = '';
 
         pdfFiles.forEach(file => {
+          // 取得完整公開直連網址
+          const fileUrl = new URL(file.name, window.location.href).href;
+
           const card = document.createElement('div');
           card.className = 'file-card';
           card.innerHTML = `
@@ -169,12 +180,48 @@
               <span class="file-name" title="${file.name}">${file.name}</span>
             </a>
             <div class="actions">
+              <button class="btn btn-outline copy-btn" data-url="${fileUrl}">Copy Link</button>
               <a class="btn btn-outline" href="${file.name}" target="_blank">Preview</a>
               <a class="btn btn-primary" href="${file.name}" download>Download</a>
             </div>
           `;
           container.appendChild(card);
         });
+
+        // 綁定複製連結事件
+        document.querySelectorAll('.copy-btn').forEach(button => {
+          button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const url = button.getAttribute('data-url');
+            try {
+              await navigator.clipboard.writeText(url);
+              const originalText = button.textContent;
+              button.textContent = 'Copied!';
+              button.classList.add('btn-copied');
+
+              setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('btn-copied');
+              }, 1500);
+            } catch (err) {
+              // 備用複製方案（若瀏覽器權限受限）
+              const textarea = document.createElement('textarea');
+              textarea.value = url;
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textarea);
+
+              button.textContent = 'Copied!';
+              button.classList.add('btn-copied');
+              setTimeout(() => {
+                button.textContent = 'Copy Link';
+                button.classList.remove('btn-copied');
+              }, 1500);
+            }
+          });
+        });
+
       } catch (err) {
         statusEl.textContent = 'Reading failed: ' + err.message;
       }
