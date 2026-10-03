@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Sharing</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+    header {
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+    p.desc {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .file-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .file-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+    }
+    .pdf-badge {
+      background-color: #fee2e2;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .file-name {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .btn {
+      font-size: 13px;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: #fff;
+    }
+    .btn-outline:hover {
+      background: #f1f5f9;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .status-msg {
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Files</h1>
+      <p class="desc"> </p>
+    </header>
+
+    <div class="file-list" id="file-list">
+      <div class="status-msg" id="status">正在讀取檔案清單...</div>
+    </div>
+  </div>
+
+  <script>
+    const GITHUB_USERNAME = 'allmwh';
+    const GITHUB_REPO = 'file_sharing';
+    const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/`;
+
+    async function loadFiles() {
+      const container = document.getElementById('file-list');
+      const statusEl = document.getElementById('status');
+
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch file list.');
+        }
+        const data = await response.json();
+
+        // 過濾出副檔名為 .pdf 的檔案
+        const pdfFiles = data.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.pdf'));
+
+        if (pdfFiles.length === 0) {
+          statusEl.textContent = 'No PDF files found.';
+          return;
+        }
+
+        container.innerHTML = '';
+
+        pdfFiles.forEach(file => {
+          const card = document.createElement('div');
+          card.className = 'file-card';
+          card.innerHTML = `
+            <a class="file-info" href="${file.name}" target="_blank">
+              <span class="pdf-badge">PDF</span>
+              <span class="file-name" title="${file.name}">${file.name}</span>
+            </a>
+            <div class="actions">
+              <a class="btn btn-outline" href="${file.name}" target="_blank">Preview</a>
+              <a class="btn btn-primary" href="${file.name}" download>Download</a>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        statusEl.textContent = 'Reading failed: ' + err.message;
+      }
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>
